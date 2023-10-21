@@ -12,6 +12,6 @@ MortalityEstimator is a tool designed for actuaries to estimate the mortality of
 
 ## Contributing:
 
-- MortalityEstimator is an open-source project, and we welcome contributions from the actuarial community. Check out our [Contribution Guidelines](CONTRIBUTING.md).
+- MortalityEstimator is an open-source project, and we welcome contributions from the actuarial community.
 
 
