@@ -1,0 +1,96 @@
+```{r}
+install.packages("StMoMo")
+install.packages("demography")
+install.packages("reliaR")
+install.packages("geometry")
+install.packages("lifecontingencies")
+install.packages("gnm")
+```
+
+##1. Télécharger les données pour le pays concerné
+```{r}
+#install.packages("forecast")
+library(lifecontingencies)
+library(forecast)
+library(reliaR)
+library(gnm)
+library(demography)
+library(StMoMo)
+
+```
+
+## Question 1 : 
+```{r echo=TRUE}
+france<-read.table(file = file.choose(),header = TRUE ,fill=TRUE ,sep = "", dec = ".")
+head(france)
+```
+
+
+```{r warning=FALSE}
+lafrance <- hmd.mx(country = "FRACNP",username = "eya.smati@esprit.tn",password = "1648294877",label = "france")
+lafrance
+```
+## Question 2 : 
+
+```{r warning=FALSE}
+par(mfrow=c(1,2))
+plot(lafrance,datatype="rate", main="france, 2000 - 2018",xlab="Age",ylab="Taux (log)")
+plot(lafrance,datatype="rate", plot.type="time", main="france, 2000 - 2018",xlab="Années",ylab="Taux (log)")
+lafrance.smth <- smooth.demogdata(lafrance,method="mspline")
+lafranceLcaM <- lca(lafrance.smth,years=2000:2018,max.age = 110, adjust="dt")
+plot(lafranceLcaM)
+
+```
+## Modèle Lee-Carter en choisissant les plages d'âge et de période
+
+On observant les paramètres du modèle sur toute la pèriode : 
+
++ αx : une fonction  décroissante pour les âges faibles inférieurs à 25 ans puis une forte croissante jusqu’à la fin de la vie d'ou la plage entre 25 et 100.
+
++ kt : cette fonction décroît sur toute la période, d'ou la plage commence de 1955 jusqu'à 2018.   
+
+
+```{r warning=FALSE}
+lafrance.momo <- StMoMoData(data = lafrance.smth ,type = "central")
+constLC <- function(ax, bx, kt, b0x, gc, wxt, ages) {
+     c1 <- mean(kt[1, ], na.rm = TRUE)
+     c2 <- sum(bx[, 1], na.rm = TRUE)
+     list(ax = ax + c1 * bx, bx = bx / c2, kt = c2 * (kt - c1))}
+age <- 25:100
+annees <- 1955:2018
+LC <- StMoMo(link = "log", staticAgeFun = TRUE, periodAgeFun = "NP", constFun = constLC)
+lafranceFit<- fit(LC, data = lafrance.momo, ages.fit = age, years.fit = annees )
+plot(lafranceFit)
+```
+## Analyse des paramètres :
+
+- αx :  la valeur moyenne des logs de la mortalité instantanné ( ln µ( x t, ) au cours du temps  ) croit fonction de l'age entre -6 et 0 .
+
+- βx indique la sensibilité de la mortalité instantanée par rapport à l’évolution générale de la mortalité. On constate des pics sur les tranches d’âges entre 60 et 75 ans.
+
+- D’après la figure ci-dessus et comme  kt indique l’évolution générale de la mortalité dans le temps ; On constate une tendance linéaire à la décroissance du paramètre k  entre 1940 et 2010. Cette tendance à la décroissance du paramètre k devient négatif au cours de la période implique d’après la formule de Lee-Carter une diminution des taux instantanés de mortalité. En conséquence, on assiste à une augmentation  de la probabilité  de la  survie sur la période observée.
+
+
+## Le résidus du modèle 
+
+```{r warning=FALSE}
+model_res <- resid(lafranceFit)
+plot(model_res)
+```
+
+## Question 5 : Projection centrale sur 20 ans
+
+```{r warning=FALSE}
+LcFore=forecast(lafranceLcaM, h = 20 ,method=mean)
+lafranceForcast <- forecast(lafranceFit , h = 20, method=mean)
+plot(lafranceForcast, only.kt=TRUE)
+lafranceForcast
+lafrance
+```
+## Question 6 : Les log taux de mortalités projetés pour la cohortes à partir de 2010
+
+```{r warning=FALSE}
+lafrance1841 <- extract.years(LcFore, years=2010:2041)
+plot(lafrance1841, main="Log taux de mortalités france,2010 - 2041",xlab="Age",ylab="Taux de mortalité (log)")
+```
+
